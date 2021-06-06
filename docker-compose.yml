@@ -1,83 +1,78 @@
 version: '2.2'
 services:
-  es01:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.13.1
-    container_name: es01
+  node01:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.11.1
+    container_name: node01
     environment:
-      - node.name=es01
-      - cluster.name=es-docker-cluster
-      - discovery.seed_hosts=es02,es03
-      - cluster.initial_master_nodes=es01,es02,es03
-      - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - node.name=node01
+      - cluster.name=es-cluster-7
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+    labels:
+      co.elastic.metrics/module: "elasticsearch"
+      co.elastic.metrics/hosts: "http://node01:9200"
+      co.elastic.metrics/metricsets: "node_stats,node"
     ulimits:
       memlock:
         soft: -1
         hard: -1
     volumes:
-      - data01:/usr/share/elasticsearch/data
+      - es-data01:/usr/share/elasticsearch/data
     ports:
       - 9200:9200
     networks:
-      - elastic
+      - es-network
 
-  es02:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.13.1
-    container_name: es02
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.11.1
+    container_name: kibana
     environment:
-      - node.name=es02
-      - cluster.name=es-docker-cluster
-      - discovery.seed_hosts=es01,es03
-      - cluster.initial_master_nodes=es01,es02,es03
-      - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    volumes:
-      - data02:/usr/share/elasticsearch/data
-    networks:
-      - elastic
-
-  es03:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.13.1
-    container_name: es03
-    environment:
-      - node.name=es03
-      - cluster.name=es-docker-cluster
-      - discovery.seed_hosts=es01,es02
-      - cluster.initial_master_nodes=es01,es02,es03
-      - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    volumes:
-      - data03:/usr/share/elasticsearch/data
-    networks:
-      - elastic
-
-  kib01:
-    image: docker.elastic.co/kibana/kibana:7.13.1
-    container_name: kib01
+      ELASTICSEARCH_HOSTS: http://node01:9200
     ports:
       - 5601:5601
-    environment:
-      ELASTICSEARCH_URL: http://es01:9200
-      ELASTICSEARCH_HOSTS: '["http://es01:9200","http://es02:9200","http://es03:9200"]'
     networks:
-      - elastic
+      - es-network
+    depends_on:
+      - node01
+
+  filebeat:
+    build: ./filebeat
+    image: hint-enabled-filebeat:7.11.1
+    user: root
+    environment:
+      ELASTICSEARCH_HOSTS: http://node01:9200
+      KIBANA_HOSTS: http://kibana:5601
+    volumes:
+      - filebeat-data01:/usr/share/filebeat/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - es-network
+    depends_on:
+      - node01
+      - kibana
+
+  metricbeat:
+    build: ./metricbeat
+    image: hint-enabled-metricbeat:7.11.1
+    user: root
+    environment:
+      ELASTICSEARCH_HOSTS: http://node01:9200
+    volumes:
+      - metricbeat-data01:/usr/share/metricbeat/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - es-network
+    depends_on:
+      - node01
 
 volumes:
-  data01:
+  es-data01:
     driver: local
-  data02:
+  metricbeat-data01:
     driver: local
-  data03:
+  filebeat-data01:
     driver: local
 
 networks:
-  elastic:
+  es-network:
     driver: bridge
