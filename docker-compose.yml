@@ -1,7 +1,7 @@
-version: '2.2'
+version: '3.5'
 services:
   node01:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.11.1
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELK_VERSION}
     container_name: node01
     environment:
       - node.name=node01
@@ -24,7 +24,7 @@ services:
       - es-network
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:7.11.1
+    image: docker.elastic.co/kibana/kibana:${ELK_VERSION}
     container_name: kibana
     environment:
       ELASTICSEARCH_HOSTS: http://node01:9200
@@ -36,8 +36,11 @@ services:
       - node01
 
   filebeat:
-    build: ./filebeat
-    image: hint-enabled-filebeat:7.11.1
+    build: 
+      context: filebeat/
+      args:
+        ELK_VERSION: ${ELK_VERSION}
+    image: hint-enabled-filebeat:${ELK_VERSION}
     user: root
     environment:
       ELASTICSEARCH_HOSTS: http://node01:9200
@@ -52,8 +55,11 @@ services:
       - kibana
 
   metricbeat:
-    build: ./metricbeat
-    image: hint-enabled-metricbeat:7.11.1
+    build: 
+      context: metricbeat/
+      args:
+        ELK_VERSION: ${ELK_VERSION}
+    image: hint-enabled-metricbeat:${ELK_VERSION}
     user: root
     environment:
       ELASTICSEARCH_HOSTS: http://node01:9200

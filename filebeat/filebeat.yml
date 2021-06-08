@@ -15,6 +15,7 @@ output.elasticsearch:
   hosts: '${ELASTICSEARCH_HOSTS:elasticsearch:9200}'
   username: '${ELASTICSEARCH_USERNAME:}'
   password: '${ELASTICSEARCH_PASSWORD:}'
+#  pipeline: ludoman-text-logs
 
 # enabled modules for monitoring (e.g. elasticsearch-xpack)
 #filebeat.modules:
