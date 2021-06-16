@@ -11,12 +11,25 @@ output.elasticsearch:
   username: '${ELASTICSEARCH_USERNAME:}'
   password: '${ELASTICSEARCH_PASSWORD:}'
 
+setup.kibana:
+  host: ${KIBANA_HOSTS:kibana:5601}
+
 # enabled modules for monitoring (e.g. elasticsearch-xpack)
 metricbeat.modules:
 - module: elasticsearch
   xpack.enabled: true
   period: 10s
   hosts: ${ELASTICSEARCH_HOSTS}
+- module: system
+  metricsets:
+     - cpu
+     - load
+     - core
+  cpu.metrics:
+     - percentages
+     - normalized_percentages
+  enabled: true
+  period: 10s
 
 # adding hint support
 metricbeat.autodiscover:
