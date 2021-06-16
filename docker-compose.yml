@@ -1,25 +1,67 @@
 version: '3.5'
+
 services:
-  node01:
+  es01:
     image: docker.elastic.co/elasticsearch/elasticsearch:${ELK_VERSION}
-    container_name: node01
+    container_name: es01
     environment:
-      - node.name=node01
+      - node.name=es01
       - cluster.name=es-cluster-7
-      - discovery.type=single-node
-      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+      - discovery.seed_hosts=es02,es03
+      - cluster.initial_master_nodes=es01,es02,es03
+      - bootstrap.memory_lock=true
+      - ${JAVA_OPTS}
     labels:
       co.elastic.metrics/module: "elasticsearch"
-      co.elastic.metrics/hosts: "http://node01:9200"
+      co.elastic.metrics/hosts: "http://es01:9200"
       co.elastic.metrics/metricsets: "node_stats,node"
     ulimits:
       memlock:
         soft: -1
         hard: -1
-    volumes:
-      - es-data01:/usr/share/elasticsearch/data
+      nofile:
+        soft: 200000
+        hard: 200000
     ports:
       - 9200:9200
+    volumes:
+      - es-data01:/usr/share/elasticsearch/data
+    networks:
+      - es-network
+  es02:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELK_VERSION}
+    container_name: es02
+    environment:
+      - node.name=es02
+      - cluster.name=es-cluster-7
+      - discovery.seed_hosts=es01,es03
+      - cluster.initial_master_nodes=es01,es02,es03
+      - bootstrap.memory_lock=true
+      - ${JAVA_OPTS}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es-data02:/usr/share/elasticsearch/data
+    networks:
+      - es-network
+  es03:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELK_VERSION}
+    container_name: es03
+    environment:
+      - node.name=es03
+      - cluster.name=es-cluster-7
+      - discovery.seed_hosts=es01,es02
+      - cluster.initial_master_nodes=es01,es02,es03
+      - bootstrap.memory_lock=true
+      - ${JAVA_OPTS}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es-data03:/usr/share/elasticsearch/data
     networks:
       - es-network
 
@@ -27,32 +69,32 @@ services:
     image: docker.elastic.co/kibana/kibana:${ELK_VERSION}
     container_name: kibana
     environment:
-      ELASTICSEARCH_HOSTS: http://node01:9200
+      ELASTICSEARCH_HOSTS: ${ELASTICSEARCH_HOSTS}
     ports:
       - 5601:5601
     networks:
       - es-network
     depends_on:
-      - node01
+      - es01
 
-  filebeat:
-    build: 
-      context: filebeat/
-      args:
-        ELK_VERSION: ${ELK_VERSION}
-    image: hint-enabled-filebeat:${ELK_VERSION}
-    user: root
-    environment:
-      ELASTICSEARCH_HOSTS: http://node01:9200
-      KIBANA_HOSTS: http://kibana:5601
-    volumes:
-      - filebeat-data01:/usr/share/filebeat/data
-      - /var/run/docker.sock:/var/run/docker.sock
-    networks:
-      - es-network
-    depends_on:
-      - node01
-      - kibana
+#  filebeat:
+#    build: 
+#      context: filebeat/
+#      args:
+#        ELK_VERSION: ${ELK_VERSION}
+#    image: hint-enabled-filebeat:${ELK_VERSION}
+#    user: root
+#    environment:
+#      ELASTICSEARCH_HOSTS: http://node01:9200
+#      KIBANA_HOSTS: http://kibana:5601
+#    volumes:
+#      - filebeat-data01:/usr/share/filebeat/data
+#      - /var/run/docker.sock:/var/run/docker.sock
+#    networks:
+#      - es-network
+#    depends_on:
+#      - node01
+#      - kibana
 
   metricbeat:
     build: 
@@ -62,22 +104,26 @@ services:
     image: hint-enabled-metricbeat:${ELK_VERSION}
     user: root
     environment:
-      ELASTICSEARCH_HOSTS: http://node01:9200
+      ELASTICSEARCH_HOSTS: ${ELASTICSEARCH_HOSTS} 
     volumes:
       - metricbeat-data01:/usr/share/metricbeat/data
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - es-network
     depends_on:
-      - node01
+      - es01
 
 volumes:
   es-data01:
     driver: local
+  es-data02:
+    driver: local
+  es-data03:
+    driver: local
   metricbeat-data01:
     driver: local
-  filebeat-data01:
-    driver: local
+  #filebeat-data01:
+  #  driver: local
 
 networks:
   es-network:

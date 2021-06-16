@@ -17,13 +17,6 @@ output.elasticsearch:
   password: '${ELASTICSEARCH_PASSWORD:}'
 #  pipeline: ludoman-text-logs
 
-# enabled modules for monitoring (e.g. elasticsearch-xpack)
-#filebeat.modules:
-#- module: elasticsearch
-#  xpack.enabled: true
-#  period: 10s
-#  hosts: ["http://node01:9200"]
-
 setup.kibana.host: '${KIBANA_HOSTS:}'
 
 filebeat.inputs:

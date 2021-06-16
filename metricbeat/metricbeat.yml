@@ -16,7 +16,7 @@ metricbeat.modules:
 - module: elasticsearch
   xpack.enabled: true
   period: 10s
-  hosts: ["http://node01:9200"]
+  hosts: ${ELASTICSEARCH_HOSTS}
 
 # adding hint support
 metricbeat.autodiscover:
